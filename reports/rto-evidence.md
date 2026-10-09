@@ -8,10 +8,24 @@ Con số không có evidence = trượt, bất kể các phần khác.
 
 | Chỉ số | Giá trị | Cách đo | Evidence |
 |---|---|---|---|
-| t_outage | `<iso>` | chaos kill | `chaos/chaos-events.jsonl:1` |
-| Request fail đầu tiên | `+__s` | dòng `ok:false` đầu tiên sau t_outage | `reports/drill-1-nodr.jsonl:__` |
+| t_outage | `2026-10-09T11:13:32` | chaos kill (`--mode netblock`, region a) | `chaos/chaos-events.jsonl:1` |
+| Request fail đầu tiên | `+2.1s` | dòng `ok:false` đầu tiên sau t_outage (`ReadTimeout`, 2451ms) | `reports/drill-1-nodr.jsonl:21` |
+| Request lỗi sau t_outage | 12/12 | đếm dòng có `ts >= t_outage` trong loadgen log | `reports/measure-drill-1.json` |
 | Request thành công sau đó | không có | không có dòng `ok:true` nào sau t_outage | `reports/measure-drill-1.json` |
 | RTO | `NO_RECOVERY` | `tools/measure_rto.py` | `reports/measure-drill-1.json` |
+
+Ghi chú:
+
+- Request cuối cùng thành công là `seq=18` (`reports/drill-1-nodr.jsonl:19`), được Region A
+  phục vụ 0.89s trước t_outage.
+- `reports/drill-1-nodr.jsonl:20` (`seq=19`) cũng lỗi `ReadTimeout`, nhưng được gửi 0.39s
+  **trước** t_outage: nó đang chờ A trả lời thì A bị đóng băng. `tools/measure_rto.py` chỉ tính
+  request gửi sau t_outage, nên mốc "user thấy lỗi đầu tiên" là dòng 21. Tính cả dòng 20 thì
+  toàn bộ drill có 13 request lỗi.
+- Mỗi request lỗi treo khoảng 2.4s (timeout 2s của edge + overhead), đúng triệu chứng
+  netblock: kernel vẫn nhận kết nối TCP nhưng process không trả lời.
+- Từ t_outage tới request cuối của loadgen (+28.5s, `reports/drill-1-nodr.jsonl:32`), không
+  có thành phần nào phát hiện outage hay chuyển traffic sang B → hệ thống không tự hồi phục.
 
 ## 2. Drill 2 — có DR
 

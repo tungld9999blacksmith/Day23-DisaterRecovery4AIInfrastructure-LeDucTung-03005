@@ -83,6 +83,59 @@ curl localhost:8002/v1/state
 
 **Expected answers:** nothing detects it yet · Region B has `count:0`, `weights:false` · users would get `region_not_ready`. This is the core lesson of AI infrastructure DR: a process being alive is not the same as a region being able to serve inference.
 
+### Câu trả lời của tôi (Step 1)
+
+Quan sát thực tế khi chạy stack bare mode:
+
+```text
+curl localhost:8002/v1/state
+{"region":"b","pool_state":"warm","weights":false,"count":0,"latest_doc_ts":null,...}
+
+curl localhost:8002/v1/infer
+{"error":"region_not_ready","reasons":["pool_state=warm","model_weights_missing","vector_db_empty(count=0)"],"region":"b"}
+```
+
+**1. Nếu Region A chết ngay bây giờ, thành phần nào phát hiện — và bằng cách nào?**
+
+Hiện tại **không có thành phần nào phát hiện** outage. Đường đi của request là
+user → `edge/proxy.py` → upstream. Proxy đọc `edge/active_region` (chứa chữ `a`/`b`,
+không phải IP), ánh xạ sang URL trong `UPSTREAM`, và chỉ đọc lại file sau mỗi
+`EDGE_TTL_SECONDS` = 5s (giả lập DNS cache). Khi A chết, proxy chỉ trả **503** cho
+từng request riêng lẻ, kèm `error` và `edge_latency_ms`:
+
+- `--mode netblock` (SIGSTOP): TCP vẫn kết nối được nhưng không ai trả lời → request
+  treo tới timeout 2s → `ReadTimeout`.
+- `--mode stop` (SIGKILL): cổng đóng → `ConnectError` ngay lập tức.
+
+Proxy không ghi nhận "A đã chết", không alert, không đổi route — `active_region` vẫn là
+`a` nên traffic tiếp tục đổ vào A mãi mãi. Không có tiến trình nào poll `/healthz` hay
+`/readyz` (health checker là phần phải viết ở Bước 3a). **Người duy nhất "phát hiện"
+là user**, thông qua lỗi họ nhận được.
+
+**2. Region B hiện có dữ liệu hoặc model weights không?**
+
+**Không có gì cả.** Process của B vẫn sống (`/healthz` trả 200) nhưng:
+
+- `count: 0`, `latest_doc_ts: null` → vector DB rỗng.
+- `weights: false` → file `state/region-b/weights/model.bin` không tồn tại trên đĩa
+  (chưa từng được replicate sang), không phải "có file mà chưa nạp vào RAM".
+- `pool_state: "warm"` → GPU pool đang ở chế độ warm standby (công suất thấp), chưa
+  phải `full`. `/readyz` chỉ trả 200 khi pool là `full` **và** đã hết `WARMUP_SECONDS`
+  (6s) kể từ lúc chuyển sang `full`.
+
+**3. Nếu đổi `edge/active_region` sang `b` ngay lúc này, user nhận được gì?**
+
+User nhận **HTTP 503** với `{"error":"region_not_ready","reasons":["pool_state=warm",
+"model_weights_missing","vector_db_empty(count=0)"]}` — sau tối đa 5s (TTL cache của
+edge). Region B **không tự hồi phục**: không có gì tự copy weights hay dữ liệu sang. B sẽ
+trả lỗi mãi cho tới khi có người (1) restore snapshot (`state/snapshot.py get`),
+(2) chuyển `pool_state` sang `full`, (3) chờ hết warm-up. Đổi DNS lúc này không rút
+ngắn outage, chỉ đổi loại lỗi từ timeout sang `region_not_ready` — vì vậy failover chỉ
+được cutover **sau khi** `/readyz` của region đích trả 200.
+
+**Bài học:** process còn sống ≠ region phục vụ được inference. Health checker phải dùng
+`/readyz` (kiểm tra pool, weights, vector count), không dùng `/healthz`.
+
 ---
 
 ## Step 2 — Red Team (25 min)
