@@ -1,0 +1,9 @@
+{"ts": 1791552650.9941928, "iso": "2026-10-09T13:30:50", "step": "1_verify_target", "ok": true, "target": "b", "pool_state": "warm", "weights": false, "count": 0}
+{"ts": 1791552651.0061963, "iso": "2026-10-09T13:30:51", "step": "2_restore_snapshot", "ok": true, "backend": "fs", "rpo_seconds": 12.0, "docs_lost": 6, "embed_model_version": "embed-model=vi-e5-base@v3", "snapshot_at": 1791552638.986791, "snapshot_latest_doc_ts": 1791552638.9674582}
+{"ts": 1791552651.0091972, "iso": "2026-10-09T13:30:51", "step": "3_scale_pool", "ok": true, "target": "b", "pool_state": "full"}
+{"ts": 1791552657.8434925, "iso": "2026-10-09T13:30:57", "step": "4_wait_ready", "ok": true, "waited_s": 6.83, "vectors": 216}
+{"ts": 1791552657.8471153, "iso": "2026-10-09T13:30:57", "step": "5_dns_cutover", "ok": true, "active_region": "b", "previous_region": "a"}
+{"ts": 1791552769.614352, "iso": "2026-10-09T13:32:49", "step": "1_verify_target", "ok": true, "target": "b", "pool_state": "warm", "weights": null, "count": null}
+{"ts": 1791552769.6183505, "iso": "2026-10-09T13:32:49", "step": "2_restore_snapshot", "ok": true, "backend": "fs", "rpo_seconds": 118.04, "docs_lost": 59, "embed_model_version": "test", "snapshot_at": 1791552769.6163564, "snapshot_latest_doc_ts": 1791552769.6163564}
+{"ts": 1791552769.619354, "iso": "2026-10-09T13:32:49", "step": "3_scale_pool", "ok": true, "target": "b", "pool_state": "full"}
+{"ts": 1791552770.6215255, "iso": "2026-10-09T13:32:50", "step": "4_wait_ready", "ok": false, "aborted": true, "waited_s": 1.0, "wait_limit_s": 1.0, "last_readyz": {"error": "ConnectError"}}

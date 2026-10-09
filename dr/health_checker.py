@@ -28,14 +28,65 @@ import httpx
 URL = {"a": "http://127.0.0.1:8001", "b": "http://127.0.0.1:8002"}
 
 
+HEALTHY, UNHEALTHY = "HEALTHY", "UNHEALTHY"
+
+
 def probe(region: str, timeout: float) -> tuple[bool, str]:
-    """TODO: trả về (ready, reason). Timeout PHẢI có — netblock làm request treo mãi."""
-    raise NotImplementedError
+    """Trả về (ready, reason). Không bao giờ ném exception: region chết = probe fail.
+
+    netblock -> ReadTimeout sau `timeout` giây, stop -> ConnectError ngay.
+    """
+    try:
+        r = httpx.get(f"{URL[region]}/readyz", timeout=timeout)
+    except httpx.HTTPError as e:
+        return False, type(e).__name__
+    if r.status_code == 200:
+        return True, "ready"
+    try:
+        reasons = r.json().get("reasons")
+    except ValueError:
+        reasons = r.text[:200]
+    return False, f"http_{r.status_code}: {reasons}"
+
+
+def next_state(current: str, fails: int, ready: bool, threshold: int) -> str:
+    """Máy trạng thái chống flapping: UNHEALTHY chỉ khi fail >= threshold lần LIÊN TIẾP,
+    HEALTHY lại ngay khi probe thành công."""
+    if ready:
+        return HEALTHY
+    if fails >= threshold:
+        return UNHEALTHY
+    return current
 
 
 def run(interval: float, timeout: float, threshold: int, duration: float, out: pathlib.Path):
-    """TODO: vòng lặp poll + phát hiện transition + ghi JSONL."""
-    raise NotImplementedError
+    """Poll /readyz của mọi region mỗi `interval` giây, ghi 1 dòng JSONL mỗi lần đổi trạng thái."""
+    out.parent.mkdir(parents=True, exist_ok=True)
+    # Giả định ban đầu HEALTHY và KHÔNG log -> dòng đầu tiên trong log luôn là một sự cố thật
+    state = dict.fromkeys(URL, HEALTHY)
+    fails = dict.fromkeys(URL, 0)
+    end = time.time() + duration
+
+    with out.open("a", encoding="utf-8") as f:
+        def emit(region: str, to: str, reason: str):
+            rec = {"ts": time.time(), "iso": time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime()),
+                   "event": "state_change", "region": region, "from": state[region], "to": to,
+                   "reason": reason, "consecutive_fails": fails[region],
+                   "interval_s": interval, "threshold": threshold}
+            f.write(json.dumps(rec) + "\n")
+            f.flush()  # runbook.py đọc file này trong lúc checker vẫn chạy
+            print("HEALTH", json.dumps(rec), flush=True)
+
+        while time.time() < end:
+            for region in URL:
+                ready, reason = probe(region, timeout)
+                fails[region] = 0 if ready else fails[region] + 1
+                to = next_state(state[region], fails[region], ready, threshold)
+                if to != state[region]:
+                    emit(region, to, reason)
+                    state[region] = to
+            # sleep cố định, không bù thời gian probe: detect không thể sớm hơn interval*threshold
+            time.sleep(interval)
 
 
 if __name__ == "__main__":

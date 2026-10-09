@@ -1,0 +1,3 @@
+{"ts": 1791552627.0092878, "iso": "2026-10-09T13:30:27", "event": "state_change", "region": "b", "from": "HEALTHY", "to": "UNHEALTHY", "reason": "http_503: ['pool_state=warm', 'model_weights_missing', 'vector_db_empty(count=0)']", "consecutive_fails": 3, "interval_s": 5.0, "threshold": 3}
+{"ts": 1791552650.107528, "iso": "2026-10-09T13:30:50", "event": "state_change", "region": "a", "from": "HEALTHY", "to": "UNHEALTHY", "reason": "ReadTimeout", "consecutive_fails": 3, "interval_s": 5.0, "threshold": 3}
+{"ts": 1791552658.6199195, "iso": "2026-10-09T13:30:58", "event": "state_change", "region": "b", "from": "UNHEALTHY", "to": "HEALTHY", "reason": "ready", "consecutive_fails": 0, "interval_s": 5.0, "threshold": 3}
