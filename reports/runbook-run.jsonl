@@ -1,0 +1,7 @@
+{"ts": 1791552650.4124467, "iso": "2026-10-09T13:30:50", "step": 1, "name": "xac_nhan_outage", "confirmed": true, "source": "health_log", "t_detect": 1791552650.107528, "reason": "ReadTimeout", "consecutive_fails": 3, "detect_after_outage_s": 21.22}
+{"ts": 1791552650.4141898, "iso": "2026-10-09T13:30:50", "step": 2, "name": "thong_bao_incident", "severity": "SEV1", "t_outage": 1791552628.8906085, "t_outage_iso": "2026-10-09T13:30:28", "t_notified": 1791552650.4141898, "notify_delay_s": 21.52, "message": "region-a down -> chuan bi failover sang region-b"}
+{"ts": 1791552657.848112, "iso": "2026-10-09T13:30:57", "step": 3, "name": "scale_gpu_pool", "confirmed_by": "auto", "ok": true, "failover_elapsed_s": 7.43, "aborted_at": null}
+{"ts": 1791552657.8501089, "iso": "2026-10-09T13:30:57", "step": 4, "name": "verify_state_replica", "vectors": 216, "weights": true, "rpo_seconds": 12.0, "docs_lost": 6, "embed_model_version": "embed-model=vi-e5-base@v3"}
+{"ts": 1791552657.8511128, "iso": "2026-10-09T13:30:57", "step": 5, "name": "dns_cutover", "ok": true, "active_region": "b", "waited_ready_s": 6.83}
+{"ts": 1791552658.3695197, "iso": "2026-10-09T13:30:58", "step": 6, "name": "verify_golden_signals", "region": "b", "requests": 10, "p95_ms": 14.0, "max_ms": 14.0, "error_rate": 0.0, "errors": 0}
+{"ts": 1791552658.3705199, "iso": "2026-10-09T13:30:58", "step": 7, "name": "post_incident", "elapsed_s": 28.98, "since_outage_s": 29.48, "measure_cmd": "python tools/measure_rto.py --loadgen reports/drill-2-withdr.jsonl --target-rto 300", "ok": true}
